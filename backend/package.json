@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@google/genai": "^0.15.0",
+    "@sparticuz/chromium": "^131.0.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -18,7 +19,8 @@
     "mongoose": "^8.5.0",
     "multer": "^2.0.1",
     "pdf-parse": "^1.1.1",
-    "puppeteer": "^23.5.0"
+    "puppeteer": "^23.5.0",
+    "puppeteer-core": "^23.5.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
