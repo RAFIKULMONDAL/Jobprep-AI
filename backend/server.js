@@ -14,6 +14,8 @@ const reportRoutes = require("./src/routes/report.routes");
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 connectDB();
 
 app.use(
