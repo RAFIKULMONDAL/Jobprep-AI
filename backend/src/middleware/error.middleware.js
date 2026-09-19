@@ -7,9 +7,11 @@ function errorHandler(err, req, res, next) {
   const message =
     err instanceof ApiError ? err.message : "Something went wrong on the server";
 
-  if (process.env.NODE_ENV !== "production") {
-    console.error(err);
-  }
+  // Always log the real error server-side (this never reaches the client -
+  // it's just our own Render/terminal logs) so we can actually debug
+  // production issues. Only the *response sent to the browser* hides
+  // details in production, via `message` above.
+  console.error(err);
 
   res.status(statusCode).json({
     success: false,
