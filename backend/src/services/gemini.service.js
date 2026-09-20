@@ -2,7 +2,7 @@
 // CommonJS (require/module.exports). Node won't let a CommonJS file
 // `require()` an ESM-only package, so we load it lazily with a dynamic
 // import() instead, and cache the client so it's only created once.
-const MODEL = process.env.GEMINI_MODEL || "gemini-3-flash-preview";
+const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
 
 let aiClientPromise = null;
 function getAiClient() {
@@ -14,18 +14,55 @@ function getAiClient() {
   return aiClientPromise;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Gemini can return transient errors (503 "high demand", 429 rate limit)
+// that usually succeed if you just try again a moment later. Rather than
+// failing the user's request immediately, retry a few times with
+// increasing delay before giving up for real.
+async function callGeminiWithRetry(fn, { retries = 3, baseDelayMs = 1000 } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const status = err?.status || err?.code;
+      const isTransient = status === 503 || status === 429 || /UNAVAILABLE|RESOURCE_EXHAUSTED/i.test(err?.message || "");
+      if (!isTransient || attempt === retries) throw err;
+      await sleep(baseDelayMs * Math.pow(2, attempt)); // 1s, 2s, 4s...
+    }
+  }
+  throw lastErr;
+}
+
 // Generic helper: calls Gemini and forces the response to match a
 // JSON schema, so we never have to "hope" the model returns valid JSON.
 async function generateStructured({ prompt, schema }) {
   const ai = await getAiClient();
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: schema,
-    },
-  });
+
+  let response;
+  try {
+    response = await callGeminiWithRetry(() =>
+      ai.models.generateContent({
+        model: MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+        },
+      })
+    );
+  } catch (err) {
+    const ApiError = require("../utils/ApiError");
+    console.error("Gemini request failed after retries:", err);
+    throw new ApiError(
+      503,
+      "The AI service is currently busy or unavailable. Please try again in a minute."
+    );
+  }
 
   return JSON.parse(response.text);
 }
