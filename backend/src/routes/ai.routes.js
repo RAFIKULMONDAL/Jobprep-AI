@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const { protect } = require("../middleware/auth.middleware");
 const { aiLimiter } = require("../middleware/rateLimiter.middleware");
+const ApiError = require("../utils/ApiError");
 const {
   analyzeResume,
   createInterviewQuestions,
@@ -15,7 +16,10 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype !== "application/pdf") {
-      return cb(new Error("Only PDF resumes are supported"));
+      // Use ApiError here (not a plain Error) so our error handler
+      // returns a clean 400 "bad request" instead of a generic 500 -
+      // an invalid upload is the client's mistake, not a server failure.
+      return cb(new ApiError(400, "Only PDF resumes are supported"));
     }
     cb(null, true);
   },
