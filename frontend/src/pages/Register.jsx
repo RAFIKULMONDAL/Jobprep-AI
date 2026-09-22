@@ -1,28 +1,40 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { registerUser } from "../api/auth.api";
-import { useAuth } from "../context/AuthContext";
 
 export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const res = await registerUser(form);
-      login(res.data, res.data.token);
-      navigate("/dashboard");
+      await registerUser(form);
+      setSubmitted(true);
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (submitted) {
+    return (
+      <div className="max-w-md mx-auto mt-10 bg-surface border border-line p-8 rounded-xl text-center">
+        <h1 className="text-2xl font-bold text-ink2 mb-3">Check your email</h1>
+        <p className="text-muted text-sm">
+          We sent a verification link to <span className="text-ink2 font-medium">{form.email}</span>.
+          Click it to activate your account, then come back and log in.
+        </p>
+        <Link to="/login" className="inline-block mt-6 text-accent font-medium text-sm">
+          Back to login
+        </Link>
+      </div>
+    );
   }
 
   return (

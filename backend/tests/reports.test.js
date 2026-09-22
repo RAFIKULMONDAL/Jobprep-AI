@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const app = require("../src/app");
 const Report = require("../src/models/Report");
 const { connectTestDB, closeTestDB, clearTestDB } = require("./setup");
+const { createVerifiedUserAndToken } = require("./testHelpers");
 
 let token;
 let userId;
@@ -22,13 +23,12 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  const res = await request(app).post("/api/auth/register").send({
+  const { user, token: newToken } = await createVerifiedUserAndToken({
     name: "Report Tester",
     email: "reports@example.com",
-    password: "password123",
   });
-  token = res.body.data.token;
-  userId = res.body.data.id;
+  token = newToken;
+  userId = user._id;
 });
 
 describe("GET /api/reports", () => {

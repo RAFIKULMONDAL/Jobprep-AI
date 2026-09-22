@@ -37,6 +37,7 @@ jest.mock("../src/services/resumeParser.service", () => ({
 const request = require("supertest");
 const app = require("../src/app");
 const { connectTestDB, closeTestDB, clearTestDB } = require("./setup");
+const { createVerifiedUserAndToken } = require("./testHelpers");
 
 let token;
 
@@ -54,12 +55,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  const res = await request(app).post("/api/auth/register").send({
+  const { token: newToken } = await createVerifiedUserAndToken({
     name: "AI Tester",
     email: "ai@example.com",
-    password: "password123",
   });
-  token = res.body.data.token;
+  token = newToken;
 });
 
 const fakePdf = Buffer.from("%PDF-1.4 fake pdf content for testing");

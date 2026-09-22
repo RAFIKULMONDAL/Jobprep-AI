@@ -21,7 +21,9 @@ const protect = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, "Not authorized, token invalid or expired");
   }
 
-  const user = await User.findById(decoded.id).select("-password");
+  const user = await User.findById(decoded.id).select(
+    "-password -verificationToken -verificationTokenExpires -resetPasswordToken -resetPasswordExpires"
+  );
   if (!user) {
     throw new ApiError(401, "User no longer exists");
   }

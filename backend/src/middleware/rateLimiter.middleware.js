@@ -13,4 +13,17 @@ const aiLimiter = rateLimit({
   },
 });
 
-module.exports = { aiLimiter };
+// Verification/reset emails cost real email-sending quota and could be
+// abused to spam someone's inbox - cap how often these can be triggered.
+const authEmailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests. Please try again in a few minutes.",
+  },
+});
+
+module.exports = { aiLimiter, authEmailLimiter };
