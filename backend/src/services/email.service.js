@@ -1,13 +1,31 @@
-const nodemailer = require("nodemailer");
+// Render's free tier blocks all outbound SMTP traffic (ports 25, 465, 587)
+// as of their September 2025 policy change - this affects every SMTP
+// provider (Gmail, Brevo's own SMTP, etc), not just Gmail specifically.
+// So instead of SMTP, we send email via Brevo's HTTP API, which travels
+// over regular HTTPS (port 443) - the same port your browser uses for
+// everything else - so it can't be blocked without breaking the internet.
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
-function getTransporter() {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+async function sendEmail({ to, subject, html }) {
+  const response = await fetch(BREVO_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "api-key": process.env.BREVO_API_KEY,
     },
+    body: JSON.stringify({
+      sender: { name: "Job Prep AI", email: process.env.EMAIL_USER },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
   });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Brevo API error (${response.status}): ${errorBody}`);
+  }
 }
 
 function emailWrapper(title, bodyHtml, linkUrl, linkLabel, expiryNote) {
@@ -30,9 +48,7 @@ function emailWrapper(title, bodyHtml, linkUrl, linkLabel, expiryNote) {
 }
 
 async function sendVerificationEmail(to, name, verifyUrl) {
-  const transporter = getTransporter();
-  await transporter.sendMail({
-    from: `"Job Prep AI" <${process.env.EMAIL_USER}>`,
+  await sendEmail({
     to,
     subject: "Verify your Job Prep AI account",
     html: emailWrapper(
@@ -46,9 +62,7 @@ async function sendVerificationEmail(to, name, verifyUrl) {
 }
 
 async function sendPasswordResetEmail(to, name, resetUrl) {
-  const transporter = getTransporter();
-  await transporter.sendMail({
-    from: `"Job Prep AI" <${process.env.EMAIL_USER}>`,
+  await sendEmail({
     to,
     subject: "Reset your Job Prep AI password",
     html: emailWrapper(
